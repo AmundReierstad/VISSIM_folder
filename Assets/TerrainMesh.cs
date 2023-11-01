@@ -94,8 +94,8 @@ public class TerrainMesh : MonoBehaviour
                     double y = double.Parse(parts[1]);
                     double z = double.Parse(parts[2]);
                     //draw point-cloud:
-                    Vector3 temp = new Vector3((float)x, (float)z, (float)y); //swap z and y, unity axises...
-                    Debug.DrawLine(temp,(temp+Vector3.one*0.1f),Color.green,float.MaxValue,false); 
+                    // Vector3 temp = new Vector3((float)x, (float)z, (float)y); //swap z and y, unity axises...
+                    // Debug.DrawLine(temp,(temp+Vector3.one*0.1f),Color.green,float.MaxValue,false); 
                     Grid[(int)(x / triangulationSquareSize),(int)(y / triangulationSquareSize)].Add(z);
                 }
             }
@@ -125,11 +125,11 @@ public class TerrainMesh : MonoBehaviour
         //setting triangles
         for (int x = 0; x < xRange-1; x++) //x
         {  
-            for (int y = 0; y < yRange-2; y++)
+            for (int y = 0; y < yRange-1; y++)
             {   
                 triangles.Add(x*yRange+y);
                 triangles.Add((x+1)*yRange+y);
-                triangles.Add(x*yRange+1+(y+1));
+                triangles.Add(x*yRange+(y+1));
                 //  3
                 // I \
                 // I  \
@@ -140,8 +140,8 @@ public class TerrainMesh : MonoBehaviour
                 //* current index (x*yRange+y)
         
                 triangles.Add((x+1)*yRange+y);
-                triangles.Add((x+1)*yRange+1+(y+1));
-                triangles.Add(x*yRange+1+(y+1));
+                triangles.Add((x+1)*yRange+(y+1));
+                triangles.Add(x*yRange+(y+1));
                 //   3____2
                 //   \    I
                 //    \   I
@@ -163,15 +163,15 @@ public class TerrainMesh : MonoBehaviour
         newMesh.RecalculateTangents();
         _meshFilter.mesh = newMesh;
         
-        //debugging
-       // for (int i=0;i<vertices.Count;i++)
-       // {
-       //     Vector3 temp = vertices[i].Position+Vector3.one*0.1f;
-       //     if (i==0 || i==1 || i==yRange )
-       //         Debug.DrawLine(vertices[i].Position,temp,Color.green,float.MaxValue,false); 
-       //     else
-       //         Debug.DrawLine(vertices[i].Position,temp,Color.red,float.MaxValue,false); 
-       //  }
+        // debugging
+        for (int i=0;i<vertices.Count;i++)
+        {
+            Vector3 temp = vertices[i].Position+Vector3.one*0.1f;
+            if (i==0 || i==1 || i==yRange )
+                Debug.DrawLine(vertices[i].Position,temp,Color.green,float.MaxValue,false); 
+            else
+                Debug.DrawLine(vertices[i].Position,temp,Color.red,float.MaxValue,false); 
+         }
         Grid = null; //free memory
     }
 
