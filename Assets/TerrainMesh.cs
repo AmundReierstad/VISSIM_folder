@@ -19,7 +19,7 @@ public class TerrainMesh : MonoBehaviour
     [SerializeField]private double _minZ;
     [SerializeField] private int readInterval=10;
     [SerializeField] private double triangulationSquareSize = 5;
-    // List<List<List<double>>> _grid=new List<List<List<double>>>();
+    public int zRange;
     private List<double>[,] Grid;
     private void Awake()
     {
@@ -104,32 +104,36 @@ public class TerrainMesh : MonoBehaviour
 
     void SetUpMesh()
     {
-        int xRange = Grid.GetUpperBound(0)+1; //returns index of last element, range therefore +1
-        int yRange = Grid.GetUpperBound(1)+1;
+        int xRange = Grid.GetUpperBound(0) + 1; //returns index of last element, range therefore +1
+        zRange = Grid.GetUpperBound(1) + 1;
         // double rangeZ = _maxZ - _minZ;
         Mesh newMesh = new Mesh();
         List<Vertex> vertices = new List<Vertex>();
         List<int> triangles = new List<int>();
-        for (int i=0;i<xRange;i++) //x axis
+        for (int i = 0; i < xRange; i++) //x axis
         {
-            for (int j = 0; j < yRange; j++) // y axis
+            for (int j = 0; j < zRange; j++) // y axis
             {
-                double z=Grid[i,j].Average();
-                var tempTransform=new Vector3((float)(i*triangulationSquareSize+triangulationSquareSize/2),(float)z,(float)(j*triangulationSquareSize+triangulationSquareSize/2)); //!unity uses y as up axis insert read z into y slot
-               
+                double y = Grid[i, j].Average();
+                var tempTransform = new Vector3((float)(i * triangulationSquareSize + triangulationSquareSize / 2),
+                    (float)y,
+                    (float)(j * triangulationSquareSize +
+                            triangulationSquareSize / 2)); //!unity uses y as up axis insert read z into y slot
+
                 var tempVertex = new Vertex(tempTransform, Vector3.one, Vector2.zero);
                 vertices.Add(tempVertex);
                 // Debug.Log("vertex added");
             }
         }
+
         //setting triangles
-        for (int x = 0; x < xRange-1; x++) //x
-        {  
-            for (int y = 0; y < yRange-1; y++)
-            {   
-                triangles.Add(x*yRange+y);
-                triangles.Add((x+1)*yRange+y);
-                triangles.Add(x*yRange+(y+1));
+        for (int x = 0; x < xRange - 1; x++) // unity X
+        {
+            for (int y = 0; y < zRange - 1; y++) //unity Z
+            {
+                triangles.Add(x * zRange + y);
+                triangles.Add((x + 1) * zRange + y);
+                triangles.Add(x * zRange + (y + 1));
                 //  3
                 // I \
                 // I  \
@@ -138,10 +142,10 @@ public class TerrainMesh : MonoBehaviour
                 //*1_____2
                 //left lower
                 //* current index (x*yRange+y)
-        
-                triangles.Add((x+1)*yRange+y);
-                triangles.Add((x+1)*yRange+(y+1));
-                triangles.Add(x*yRange+(y+1));
+
+                triangles.Add((x + 1) * zRange + y);
+                triangles.Add((x + 1) * zRange + (y + 1));
+                triangles.Add(x * zRange + (y + 1));
                 //   3____2
                 //   \    I
                 //    \   I
@@ -149,30 +153,44 @@ public class TerrainMesh : MonoBehaviour
                 //      \ I 
                 //  *     1
                 //right upper
-        
+
             }
-           
+
         }
-        Debug.Log("yrange:"+yRange);
-        Debug.Log("xrange:"+xRange);
+
+        Debug.Log("zrange:" + zRange);
+        Debug.Log("xrange:" + xRange);
         newMesh.vertices = vertices.Select(v => v.Position).ToArray();
         newMesh.triangles = triangles.ToArray();
-        newMesh.triangles=newMesh.triangles.Reverse().ToArray(); //flip normals
+        newMesh.triangles = newMesh.triangles.Reverse().ToArray(); //flip normals
         newMesh.RecalculateBounds();
         newMesh.RecalculateNormals();
         newMesh.RecalculateTangents();
         _meshFilter.mesh = newMesh;
-        
-        // debugging
+
+        /* debugging:
         for (int i=0;i<vertices.Count;i++)
         {
             Vector3 temp = vertices[i].Position+Vector3.one*0.1f;
-            if (i==0 || i==1 || i==yRange )
-                Debug.DrawLine(vertices[i].Position,temp,Color.green,float.MaxValue,false); 
+            if (i==0 || i==1 || i==zRange )
+                Debug.DrawLine(vertices[i].Position,temp,Color.green,float.MaxValue,false);
             else
-                Debug.DrawLine(vertices[i].Position,temp,Color.red,float.MaxValue,false); 
-         }
+                Debug.DrawLine(vertices[i].Position,temp,Color.red,float.MaxValue,false);
+        }
+
+        int t = (zRange-1)*3*2;
+        for (int i = 0; i <=9; i++)
+        {
+            Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
+            Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.yellow,float.MaxValue,false);
+        }
+        for (int i = t; i <=t+3; i++)
+        {
+            Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
+            Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.green,float.MaxValue,false);
+        }
         Grid = null; //free memory
+        */
     }
 
     // Start is called before the first frame update

@@ -9,7 +9,7 @@ public class PhysicsLogic : MonoBehaviour
         [SerializeField] private float mass = 1;
         [SerializeField] private float accelerationFactor = 1;
         [SerializeField] private float bouncinessFactor=1;
-        private GameObject _planeRef;
+        [SerializeField]  private GameObject _planeRef;
         private GameObject _ballRef;
         private float _ballRadius;
         private MeshFilter _planeMeshRef;
@@ -20,7 +20,8 @@ public class PhysicsLogic : MonoBehaviour
         private Vector3 _velocity;
         private Vector3 _startVelocity;
         private Vector3 _acceleration;
-        private int _startIndex;
+        private int _prevIndex;
+        private int _planeRefZRange;
     public struct CollisionData
     {
         public CollisionStates State;
@@ -49,14 +50,18 @@ public class PhysicsLogic : MonoBehaviour
         _startVelocity=Vector3.zero;
         _acceleration=Vector3.zero;
         _velocity = Vector3.zero;
-       
+         int startIndex = GetWhichTriangleBallIsIn();
+         _prevIndex = startIndex;
+        _planeNormalVector = CalculateNormalizedNormalForTriangleSurface(startIndex);
+        
         // Debug.Log(_planeMeshRef.vertices[3]+"/n"+_planeMeshRef.vertices[4]+"/n"+_planeMeshRef.vertices[5]);
     }
 
     void Start()
     {
-        _startIndex = GetWhichTriangleBallIsIn();
-        _planeNormalVector = CalculateNormalizedNormalForTriangleSurface(_startIndex);
+
+        _planeRefZRange = _planeRef.GetComponent<TerrainMesh>().zRange;
+
         // // _startIndex=GetWhichTriangleBallIsIn();
         // _startIndex = 3;
     }
@@ -65,9 +70,10 @@ public class PhysicsLogic : MonoBehaviour
     void FixedUpdate()
     {
         //determine position in relation to mesh
-        int index = GetWhichTriangleBallIsIn();
+        int newIndex = GetWhichTriangleBallIsInOptimized(_prevIndex);
+        _prevIndex = newIndex;
         _planeNormalVectorPrev = _planeNormalVector;
-        _planeNormalVector=CalculateNormalizedNormalForTriangleSurface(index);
+        _planeNormalVector=CalculateNormalizedNormalForTriangleSurface(newIndex);
         
         //Calculate forces
         //NormalF
@@ -158,7 +164,7 @@ public class PhysicsLogic : MonoBehaviour
                 {
                     if (baryCentricCords.z is >= 0 and <= 1)
                     {
-                        // Debug.Log("Index found>"+i);
+                        Debug.Log("Index found>"+i);
                         return i;
                     }
                 }
@@ -166,10 +172,52 @@ public class PhysicsLogic : MonoBehaviour
           
 
         }
-        Debug.Log("Ball not found on triangle surface");
+        Debug.Log("Ball not found on triangle surface initially");
         return 0; //not found
     }
 
+    private int GetWhichTriangleBallIsInOptimized(int prevIndex) //returns index of starting vertex of triangle ball is in by searching around previous index
+    {
+        var zRange = _planeRefZRange;
+        var mesh = _planeMeshRef.mesh;
+        int triangle = 3;
+        /* search triangles around previous index *
+         *    I  I  I
+         * ^  I  *  I
+         * Z  I  I  I
+         *    X ->
+         */
+        for (int j = -1; j <=2; j++)
+        {
+            int searchIndex = prevIndex+((zRange - 1) * 3 * 2*j); // (zRange - 1) * 3 * 2*j) factor to shift to next strip
+            if (searchIndex < 2*triangle || searchIndex>mesh.triangles.Length-2*triangle) break; //bounds check
+            //iterate over current z triangle strip
+            for (int i = searchIndex-2*triangle; i <= searchIndex+2*triangle; i+=triangle)
+            {
+                Vector3 baryCentricCords = ReturnBarycentricCordsXZplane(
+                    this.transform.position,
+                    mesh.vertices[mesh.triangles[i]],
+                    mesh.vertices[mesh.triangles[i + 1]],
+                    mesh.vertices[mesh.triangles[i + 2]]);
+                // Debug.Log("CurrentIndex: "+i);
+                // Debug.Log("Barys: "+baryCentricCords);
+                if (baryCentricCords.x is >= 0 and <= 1)
+                {
+                    if (baryCentricCords.y is >= 0 and <= 1)
+                    {
+                        if (baryCentricCords.z is >= 0 and <= 1)
+                        {
+                            // Debug.Log("Index found>"+i);
+                            return i;
+                        }
+                    }
+                }
+            }
+        }
+        
+        Debug.Log("Ball not found on triangle surface");
+        return 0; //not found
+    }
     public CollisionData DetectCollisionWithTriangleSurface(Vector3 pointInSurface, Vector3 surfaceNormalVector, Vector3 ballPosition, float radiusBall)
    {
        CollisionData returnData;
