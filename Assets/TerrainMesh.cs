@@ -5,7 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Xml.Schema;
 using UnityEngine;
-
+ // order of triangles is clockwise after flipping, flipping was done to get UVs facing up. Fix UVs to preserve
+//triangle order ( ), must if so also fix findinitaltriangle function in physic script ( ) 
 public class TerrainMesh : MonoBehaviour
 {
     private MeshFilter _meshFilter;
@@ -18,7 +19,7 @@ public class TerrainMesh : MonoBehaviour
     [SerializeField]private double _maxZ;
     [SerializeField]private double _minZ;
     [SerializeField] private int readInterval=10;
-    [SerializeField] private double triangulationSquareSize = 5;
+    [SerializeField] public double triangulationSquareSize = 5;
     public int zRange;
     private List<double>[,] Grid;
     private void Awake()
@@ -125,28 +126,28 @@ public class TerrainMesh : MonoBehaviour
                 // Debug.Log("vertex added");
             }
         }
-
+        //unity is using clockwise winding order, need to change order of triangles (they are ccw)! (X) done, document in report ( )
         //setting triangles
         for (int x = 0; x < xRange - 1; x++) // unity X
         {
             for (int y = 0; y < zRange - 1; y++) //unity Z
             {
-                triangles.Add(x * zRange + y);
-                triangles.Add((x + 1) * zRange + y);
-                triangles.Add(x * zRange + (y + 1));
-                //  3
+                triangles.Add(x * zRange + y); //1
+                triangles.Add(x * zRange + (y + 1)); //2
+                triangles.Add((x + 1) * zRange + y); //3
+                //  2
                 // I \
                 // I  \
                 // I   \
                 // I    \
-                //*1_____2
+                //*1_____3
                 //left lower
                 //* current index (x*yRange+y)
 
-                triangles.Add((x + 1) * zRange + y);
-                triangles.Add((x + 1) * zRange + (y + 1));
-                triangles.Add(x * zRange + (y + 1));
-                //   3____2
+                triangles.Add((x + 1) * zRange + y);//1
+                triangles.Add(x * zRange + (y + 1));//2
+                triangles.Add((x + 1) * zRange + (y + 1));//3
+                //   2____3
                 //   \    I
                 //    \   I
                 //     \  I
@@ -162,7 +163,7 @@ public class TerrainMesh : MonoBehaviour
         Debug.Log("xrange:" + xRange);
         newMesh.vertices = vertices.Select(v => v.Position).ToArray();
         newMesh.triangles = triangles.ToArray();
-        newMesh.triangles = newMesh.triangles.Reverse().ToArray(); //flip normals
+        // newMesh.triangles = newMesh.triangles.Reverse().ToArray(); //flip normals
         newMesh.RecalculateBounds();
         newMesh.RecalculateNormals();
         newMesh.RecalculateTangents();
@@ -178,19 +179,21 @@ public class TerrainMesh : MonoBehaviour
                 Debug.DrawLine(vertices[i].Position,temp,Color.red,float.MaxValue,false);
         }
 
+        */
         int t = (zRange-1)*3*2;
-        for (int i = 0; i <=9; i++)
+        for (int i = 0; i <=3; i++)
         {
             Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
             Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.yellow,float.MaxValue,false);
         }
+        Vector3 temp1 = vertices[newMesh.triangles[0]].Position - Vector3.one * 0.5f;
+        Debug.DrawLine(vertices[newMesh.triangles[0]].Position,temp1,Color.magenta,float.MaxValue,false);
         for (int i = t; i <=t+3; i++)
         {
             Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
             Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.green,float.MaxValue,false);
         }
         Grid = null; //free memory
-        */
     }
 
     // Start is called before the first frame update

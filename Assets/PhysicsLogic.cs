@@ -13,6 +13,8 @@ public class PhysicsLogic : MonoBehaviour
         private GameObject _ballRef;
         private float _ballRadius;
         private MeshFilter _planeMeshRef;
+        private Vector3 _origoGrid;
+        private double _gridSquareSize;
         private Vector3 _planeNormalVector;
         private Vector3 _planeNormalVectorPrev;
         private Vector3 _gravityForce;
@@ -22,6 +24,7 @@ public class PhysicsLogic : MonoBehaviour
         private Vector3 _acceleration;
         private int _prevIndex;
         private int _planeRefZRange;
+        private bool _onGrid;
     public struct CollisionData
     {
         public CollisionStates State;
@@ -35,7 +38,7 @@ public class PhysicsLogic : MonoBehaviour
         ClippingMassCenterBelowSurface,
         AboveSurface
     }
-    //Physics.gravity , can be used as gravity force vector, vec 3, with -9.81 y component
+
         
     // Start is called before the first frame update
     void Awake()
@@ -45,37 +48,40 @@ public class PhysicsLogic : MonoBehaviour
         
         _ballRadius = _ballRef.GetComponent<SphereCollider>().radius;
         _planeMeshRef = _planeRef.GetComponent<MeshFilter>();
-        _gravityForce = Physics.gravity * mass*accelerationFactor;
+        _gridSquareSize = _planeRef.GetComponent<TerrainMesh>().triangulationSquareSize;
+        _gravityForce = Physics.gravity * mass*accelerationFactor;    //Physics.gravity , can be used as gravity force vector, vec 3, with -9.81 y component
    
         _startVelocity=Vector3.zero;
         _acceleration=Vector3.zero;
         _velocity = Vector3.zero;
-         int startIndex = GetWhichTriangleBallIsIn();
-         _prevIndex = startIndex;
-        _planeNormalVector = CalculateNormalizedNormalForTriangleSurface(startIndex);
-        
-        // Debug.Log(_planeMeshRef.vertices[3]+"/n"+_planeMeshRef.vertices[4]+"/n"+_planeMeshRef.vertices[5]);
+        _origoGrid=_planeMeshRef.mesh.vertices[0];
     }
 
     void Start()
     {
-
-        _planeRefZRange = _planeRef.GetComponent<TerrainMesh>().zRange;
-
-        // // _startIndex=GetWhichTriangleBallIsIn();
-        // _startIndex = 3;
+        _planeRefZRange = _planeRef.GetComponent<TerrainMesh>().zRange; //needed for calculation further on
+        // int startIndex = GetWhichTriangleBallIsIn();
+        int startIndex = FindInitialTriangleOptimized();
+        if (startIndex != -1) _onGrid = true;
+        // Debug.Log("Index calculated:"+FindInitialTriangleOptimized());
+        _prevIndex = startIndex;
+        _planeNormalVector = CalculateNormalizedNormalForTriangleSurface(startIndex);
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
+        //DONT UPDATE IF NOT ON GRID
+        if (!_onGrid) return;
+        
         //determine position in relation to mesh
         int newIndex = GetWhichTriangleBallIsInOptimized(_prevIndex);
+        if (newIndex == -1) {_onGrid = false; Debug.Log(name+" fell off"); return;}
         _prevIndex = newIndex;
         _planeNormalVectorPrev = _planeNormalVector;
         _planeNormalVector=CalculateNormalizedNormalForTriangleSurface(newIndex);
         
-        //Calculate forces
+        //Calculate forces:
         //NormalF
         _normalForce =-Vector3.Dot(_planeNormalVector,_gravityForce)*_planeNormalVector;
        // CollisionResponse(index);
@@ -91,7 +97,6 @@ public class PhysicsLogic : MonoBehaviour
         
         //calculate acceleration from sum of forces over mass
         _acceleration = (_normalForce+_gravityForce)/mass;
-
         //calculate velocity
         _velocity+=_startVelocity+_acceleration*Time.fixedDeltaTime;
         //apply velocity and translate ball
@@ -144,7 +149,8 @@ public class PhysicsLogic : MonoBehaviour
         return baryCentricCoordinates;
     }
 
-    private int GetWhichTriangleBallIsIn() //returns index of starting vertex of triangle ball is in
+    private int GetWhichTriangleBallIsIn() 
+    //returns index of starting vertex of triangle ball is in. O(n triangles)
     {
         var mesh = _planeMeshRef.mesh;
         
@@ -176,7 +182,38 @@ public class PhysicsLogic : MonoBehaviour
         return 0; //not found
     }
 
-    private int GetWhichTriangleBallIsInOptimized(int prevIndex) //returns index of starting vertex of triangle ball is in by searching around previous index
+    private int FindInitialTriangleOptimized() 
+    //returns index of starting triangle by calculating grid position by world position. O(1) much faster
+    {
+        var objectPosition = transform.position;
+        
+        var dif = objectPosition - _origoGrid;
+        int offsetX = (int)(dif.x / _gridSquareSize);
+        int offsetZ = (int)(dif.z / _gridSquareSize);
+        int triangle = 3;
+        
+        var index = ((offsetX) * (_planeRefZRange-1)*triangle*2) //x component
+                    +(offsetZ)*(triangle*2); //y component
+
+        // Debug.DrawLine(mesh.vertices[mesh.triangles[index]],mesh.vertices[mesh.triangles[index]]-=Vector3.one*0.1f,Color.cyan,float.MaxValue,false);
+        //found triangle index corresponding to lower triangle of a quad, need to determine if its in the upper or lower triangle
+        var mesh = _planeMeshRef.mesh;
+        float tmpX = objectPosition.x - mesh.vertices[mesh.triangles[index]].x;
+        float tmpZ = objectPosition.z - mesh.vertices[mesh.triangles[index]].z;
+        if (tmpX>tmpZ)//test diagonal relation to square its in
+            index += 3;
+        // Debug.Log("TmpX:"+tmpX);
+        // Debug.Log("TmpZ:"+tmpZ);
+        
+        
+        
+        // Debug.Log("difX:"+dif.x);
+        // Debug.Log("offsetX:"+offsetX);
+        // Debug.Log("offsetZ:"+offsetZ);
+        return index;
+    }
+    private int GetWhichTriangleBallIsInOptimized(int prevIndex) 
+    //returns index of starting vertex of triangle ball is in by searching around previous index. 
     {
         var zRange = _planeRefZRange;
         var mesh = _planeMeshRef.mesh;
@@ -214,9 +251,8 @@ public class PhysicsLogic : MonoBehaviour
                 }
             }
         }
-        
         Debug.Log("Ball not found on triangle surface");
-        return 0; //not found
+        return -1; //not found
     }
     public CollisionData DetectCollisionWithTriangleSurface(Vector3 pointInSurface, Vector3 surfaceNormalVector, Vector3 ballPosition, float radiusBall)
    {
