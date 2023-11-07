@@ -1,8 +1,5 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-
 
 public class PhysicsLogic : MonoBehaviour
 {
@@ -10,6 +7,8 @@ public class PhysicsLogic : MonoBehaviour
         [SerializeField] private float accelerationFactor = 1;
         [SerializeField] private float bouncinessFactor=1;
         [SerializeField]  private GameObject _planeRef;
+        private float _planeZMax;
+        private float _planeXMax;
         private GameObject _ballRef;
         private float _ballRadius;
         private MeshFilter _planeMeshRef;
@@ -45,7 +44,8 @@ public class PhysicsLogic : MonoBehaviour
     {
         _planeRef = GameObject.Find("TerrainMesh");
         _ballRef = GameObject.Find("Ball");
-        
+        _planeXMax = (float)_planeRef.GetComponent<TerrainMesh>()._maxX;
+        _planeZMax = (float)_planeRef.GetComponent<TerrainMesh>()._maxY;
         _ballRadius = _ballRef.GetComponent<SphereCollider>().radius;
         _planeMeshRef = _planeRef.GetComponent<MeshFilter>();
         _gridSquareSize = _planeRef.GetComponent<TerrainMesh>().triangulationSquareSize;
@@ -61,9 +61,9 @@ public class PhysicsLogic : MonoBehaviour
     {
         _planeRefZRange = _planeRef.GetComponent<TerrainMesh>().zRange; //needed for calculation further on
         // int startIndex = GetWhichTriangleBallIsIn();
-        int startIndex = FindInitialTriangleOptimized();
+        int startIndex = FindTriangleFast();
         if (startIndex != -1) _onGrid = true;
-        // Debug.Log("Index calculated:"+FindInitialTriangleOptimized());
+        // Debug.Log("Index calculated:"+FindTriangleFast());
         _prevIndex = startIndex;
         _planeNormalVector = CalculateNormalizedNormalForTriangleSurface(startIndex);
     }
@@ -75,7 +75,8 @@ public class PhysicsLogic : MonoBehaviour
         if (!_onGrid) return;
         
         //determine position in relation to mesh
-        int newIndex = GetWhichTriangleBallIsInOptimized(_prevIndex);
+        // int newIndex = GetWhichTriangleBallIsInOptimized(_prevIndex);
+        int newIndex = FindTriangleFast();
         if (newIndex == -1) {_onGrid = false; Debug.Log(name+" fell off"); return;}
         _prevIndex = newIndex;
         _planeNormalVectorPrev = _planeNormalVector;
@@ -182,7 +183,7 @@ public class PhysicsLogic : MonoBehaviour
         return 0; //not found
     }
 
-    private int FindInitialTriangleOptimized() 
+    private int FindTriangleFast() 
     //returns index of starting triangle by calculating grid position by world position. O(1) much faster
     {
         var objectPosition = transform.position;
@@ -192,6 +193,13 @@ public class PhysicsLogic : MonoBehaviour
         int offsetZ = (int)(dif.z / _gridSquareSize);
         int triangle = 3;
         
+        //bound check
+        if (   objectPosition.x < _origoGrid.x 
+            || objectPosition.z < _origoGrid.z 
+            || objectPosition.x>_planeXMax 
+            || objectPosition.z>_planeZMax) {
+            return -1; //out of bounds
+        } 
         var index = ((offsetX) * (_planeRefZRange-1)*triangle*2) //x component
                     +(offsetZ)*(triangle*2); //y component
 

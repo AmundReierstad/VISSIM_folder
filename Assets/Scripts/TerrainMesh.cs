@@ -12,9 +12,9 @@ public class TerrainMesh : MonoBehaviour
     private MeshFilter _meshFilter;
 
     [SerializeField] TextAsset textFile;
-    [SerializeField]private double _maxX;
+    [SerializeField] public  double _maxX;
     [SerializeField]private double _minX;
-    [SerializeField]private double _maxY;
+    [SerializeField] public double _maxY;
     [SerializeField]private double _minY;
     [SerializeField]private double _maxZ;
     [SerializeField]private double _minZ;
@@ -159,8 +159,8 @@ public class TerrainMesh : MonoBehaviour
 
         }
 
-        Debug.Log("zrange:" + zRange);
-        Debug.Log("xrange:" + xRange);
+        // Debug.Log("zrange:" + zRange);
+        // Debug.Log("xrange:" + xRange);
         newMesh.vertices = vertices.Select(v => v.Position).ToArray();
         newMesh.triangles = triangles.ToArray();
         // newMesh.triangles = newMesh.triangles.Reverse().ToArray(); //flip normals
