@@ -1,4 +1,5 @@
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 public class BSpline : MonoBehaviour
@@ -13,6 +14,12 @@ public class BSpline : MonoBehaviour
     [SerializeField] private float splineUpdateInterval = 2;
     [SerializeField] private float addControlPointInterval = 4;
     // Start is called before the first frame update
+    private void OnCollisionEnter(Collision other)
+    {
+        InvokeRepeating(nameof(AddControlPoint),0,addControlPointInterval);
+        InvokeRepeating(nameof(DrawSpline),0,splineUpdateInterval);
+    }
+
     private void Awake()
     {
         _renderer = GetComponent<LineRenderer>();
@@ -23,15 +30,7 @@ public class BSpline : MonoBehaviour
     
     void Start()
     {
-        InvokeRepeating(nameof(AddControlPoint),1,addControlPointInterval);
-        InvokeRepeating(nameof(DrawSpline),1,splineUpdateInterval);
-        // for (float i = 0f; i < (_controlPoints.Count - grade); i += deltaT) //changing here only extends line through last node
-        // {
-        //     spline.Add(EvaluateBSpline(i));
-        // }
-        //
-        // _renderer.positionCount = spline.Count;
-        // _renderer.SetPositions(spline.ToArray());
+     
     }
 
 
@@ -41,15 +40,14 @@ public class BSpline : MonoBehaviour
         _renderer.positionCount = 0;
         SetupKnotVector();
         spline.Clear();
-        for (float i = 0f; i < (controlPoints.Count - grade); i += deltaT) //changing here only extends line through last node
+        for (float i = 0f; i < (controlPoints.Count - grade); i += deltaT) 
         {
             spline.Add(EvaluateBSpline(i));
         }
 
         _renderer.positionCount = spline.Count;
         _renderer.SetPositions(spline.ToArray());
-   
-        // Destroy(_renderer,splineUpdateInterval);
+        
     }
     private void AddControlPoint()
     //use to add during runtime
@@ -111,7 +109,7 @@ public class BSpline : MonoBehaviour
         
         for (int j = 0; j <= d; j++)
         {
-            point[d - j] = controlPoints[my - j]; //bugggg? trying -1 gets right start but does not iterate through all nodes
+            point[d - j] = controlPoints[my - j]; 
             Debug.Log("Index: "+ (my-j));
         }
 

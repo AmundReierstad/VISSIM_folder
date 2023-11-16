@@ -6,7 +6,7 @@ using Random = UnityEngine.Random;
 public class RainManager : MonoBehaviour
 {
     [SerializeField] private GameObject rainDropPrefab;
-     private List<GameObject> _population;
+    [SerializeField] List<GameObject> _population;
     [SerializeField] float lifeTime=4;
     [SerializeField] float size=50;
     [SerializeField] float maxPopulation=10;
@@ -30,8 +30,14 @@ public class RainManager : MonoBehaviour
     }
     void SpawnRainDrop()
     {
-        _population.RemoveAll(x => !x); //remove destroyed game-objects from list
-        if (_population.Count > maxPopulation) return;
+        if (_population!=null)
+        {
+             if (_population.Count > maxPopulation)
+             {
+                 _population.RemoveAll(x => !x);
+                 return;
+             }
+        }
         GameObject rainDrop = Instantiate(rainDropPrefab,GetRandomRainDropPosition(),Quaternion.identity); //quaterionon.id->no change in rotation
         _population.Add(rainDrop);
         Destroy(rainDrop,lifeTime);

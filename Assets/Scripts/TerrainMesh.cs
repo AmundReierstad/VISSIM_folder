@@ -154,46 +154,30 @@ public class TerrainMesh : MonoBehaviour
                 //      \ I 
                 //  *     1
                 //right upper
-
             }
-
         }
-
-        // Debug.Log("zrange:" + zRange);
-        // Debug.Log("xrange:" + xRange);
+  
         newMesh.vertices = vertices.Select(v => v.Position).ToArray();
         newMesh.triangles = triangles.ToArray();
-        // newMesh.triangles = newMesh.triangles.Reverse().ToArray(); //flip normals
         newMesh.RecalculateBounds();
         newMesh.RecalculateNormals();
         newMesh.RecalculateTangents();
         _meshFilter.mesh = newMesh;
-
-        /* debugging:
-        for (int i=0;i<vertices.Count;i++)
-        {
-            Vector3 temp = vertices[i].Position+Vector3.one*0.1f;
-            if (i==0 || i==1 || i==zRange )
-                Debug.DrawLine(vertices[i].Position,temp,Color.green,float.MaxValue,false);
-            else
-                Debug.DrawLine(vertices[i].Position,temp,Color.red,float.MaxValue,false);
-        }
-
-        */
-        int t = (zRange-1)*3*2;
-        for (int i = 0; i <=3; i++)
-        {
-            Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
-            Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.yellow,float.MaxValue,false);
-        }
-        Vector3 temp1 = vertices[newMesh.triangles[0]].Position - Vector3.one * 0.5f;
-        Debug.DrawLine(vertices[newMesh.triangles[0]].Position,temp1,Color.magenta,float.MaxValue,false);
-        for (int i = t; i <=t+3; i++)
-        {
-            Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
-            Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.green,float.MaxValue,false);
-        }
         Grid = null; //free memory
+        //
+        // int t = (zRange-1)*3*2;
+        // for (int i = 0; i <=3; i++)
+        // {
+        //     Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
+        //     Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.yellow,float.MaxValue,false);
+        // }
+        // Vector3 temp1 = vertices[newMesh.triangles[0]].Position - Vector3.one * 0.5f;
+        // Debug.DrawLine(vertices[newMesh.triangles[0]].Position,temp1,Color.magenta,float.MaxValue,false);
+        // for (int i = t; i <=t+3; i++)
+        // {
+        //     Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
+        //     Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.green,float.MaxValue,false);
+        // }
     }
 
     // Start is called before the first frame update
