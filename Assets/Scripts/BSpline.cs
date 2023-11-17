@@ -110,7 +110,7 @@ public class BSpline : MonoBehaviour
         for (int j = 0; j <= d; j++)
         {
             point[d - j] = controlPoints[my - j]; 
-            Debug.Log("Index: "+ (my-j));
+            // Debug.Log("Index: "+ (my-j));
         }
 
         for (int k = d; k > 0; k--)

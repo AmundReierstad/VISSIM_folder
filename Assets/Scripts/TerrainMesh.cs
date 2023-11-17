@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Xml.Schema;
 using UnityEngine;
- // order of triangles is clockwise after flipping, flipping was done to get UVs facing up. Fix UVs to preserve
+using UnityEngine.Serialization;
+
+// order of triangles is clockwise after flipping, flipping was done to get UVs facing up. Fix UVs to preserve
 //triangle order ( ), must if so also fix findinitaltriangle function in physic script ( ) 
 public class TerrainMesh : MonoBehaviour
 {
@@ -14,10 +16,10 @@ public class TerrainMesh : MonoBehaviour
     [SerializeField] TextAsset textFile;
     [SerializeField] public  double _maxX;
     [SerializeField]private double _minX;
-    [SerializeField] public double _maxY;
-    [SerializeField]private double _minY;
-    [SerializeField]private double _maxZ;
+    [SerializeField] public double _maxZ;
     [SerializeField]private double _minZ;
+    [SerializeField]private double _maxY; 
+    [SerializeField]private double _minY;
     [SerializeField] private int readInterval=10;
     [SerializeField] public double triangulationSquareSize = 5;
     public int zRange;
@@ -30,7 +32,7 @@ public class TerrainMesh : MonoBehaviour
         getCoordinateBounds(reader);
         reader.DiscardBufferedData();
         reader.BaseStream.Seek(0, System.IO.SeekOrigin.Begin); 
-        setUpGrid(_maxX,_minX,_maxY,_minY,reader);
+        setUpGrid(_maxX,_minX,_maxZ,_minZ,reader);
         SetUpMesh();
    
     }
@@ -38,11 +40,11 @@ public class TerrainMesh : MonoBehaviour
     private void getCoordinateBounds(StreamReader reader) //works
     {
          _maxX = double.MinValue;
-         _maxY = double.MinValue;
          _maxZ = double.MinValue;
+         _maxY = double.MinValue;
          _minX = double.MaxValue;
-         _minY = double.MaxValue;
          _minZ = double.MaxValue;
+         _minY = double.MaxValue;
          
      
         string line;
@@ -56,10 +58,10 @@ public class TerrainMesh : MonoBehaviour
                 double z = double.Parse(parts[2]);
                 _maxX = Math.Max(_maxX, x);
                 _minX = Math.Min(_minX, x);
-                _maxY = Math.Max(_maxY, y);
-                _minY = Math.Min(_minY, y);
-                _maxZ = Math.Max(_maxZ, z);
-                _minZ = Math.Min(_minZ, z);
+                _maxZ = Math.Max(_maxZ, y);
+                _minZ = Math.Min(_minZ, y);
+                _maxY = Math.Max(_maxY, z);
+                _minY = Math.Min(_minY, z);
             }
         }
     }
@@ -107,7 +109,7 @@ public class TerrainMesh : MonoBehaviour
     {
         int xRange = Grid.GetUpperBound(0) + 1; //returns index of last element, range therefore +1
         zRange = Grid.GetUpperBound(1) + 1;
-        // double rangeZ = _maxZ - _minZ;
+        // double rangeZ = _maxY - _minY;
         Mesh newMesh = new Mesh();
         List<Vertex> vertices = new List<Vertex>();
         List<int> triangles = new List<int>();
