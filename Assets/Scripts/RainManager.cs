@@ -5,18 +5,27 @@ using Color = UnityEngine.Color;
 using Random = UnityEngine.Random;
 public class RainManager : MonoBehaviour
 {
+    #region Members
     [SerializeField] private GameObject rainDropPrefab;
     [SerializeField] List<GameObject> _population;
     [SerializeField] float lifeTime=4;
     [SerializeField] float size=50;
     [SerializeField] float maxPopulation=10;
     private Vector2 _spawnSize;
+    #endregion
 
+    #region Constructor
     public RainManager()
     {
         _spawnSize = Vector2.one * size;
     }
+    void Start()
+    {
+        InvokeRepeating("SpawnRainDrop",0,0.4f);
+    }
+    #endregion
 
+    #region Methods
     Vector3 GetRandomRainDropPosition()
     {
         float x = Random.Range(-_spawnSize.x, _spawnSize.x);
@@ -50,9 +59,6 @@ public class RainManager : MonoBehaviour
         Vector3 spawnBound = new Vector3(_spawnSize.x, 0, _spawnSize.y)*2;
         Gizmos.DrawWireCube(transform.position, spawnBound);
     }
-    void Start()
-    {
-        InvokeRepeating("SpawnRainDrop",0,0.4f);
-    }
+    #endregion
 
 }

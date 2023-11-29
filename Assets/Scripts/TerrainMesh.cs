@@ -7,12 +7,11 @@ using System.Xml.Schema;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-// order of triangles is clockwise after flipping, flipping was done to get UVs facing up. Fix UVs to preserve
-//triangle order ( ), must if so also fix findinitaltriangle function in physic script ( ) 
 public class TerrainMesh : MonoBehaviour
+    //class for building and loading the terrain mesh
 {
+    #region Members
     private MeshFilter _meshFilter;
-
     [SerializeField] TextAsset textFile;
     [SerializeField] public  double _maxX;
     [SerializeField]private double _minX;
@@ -22,22 +21,27 @@ public class TerrainMesh : MonoBehaviour
     [SerializeField]private double _minY;
     [SerializeField] private int readInterval=10;
     [SerializeField] public double triangulationSquareSize = 5;
+    [SerializeField] public bool drawPointCloud = false;
     public int zRange;
     private List<double>[,] Grid;
+    #endregion
+
+    #region Constructors
     private void Awake()
     {
         _meshFilter = GetComponent<MeshFilter>();
         using var stream = new StreamReader(new MemoryStream(textFile.bytes));
         using var reader = new StreamReader(stream.BaseStream);
-        getCoordinateBounds(reader);
+        GetCoordinateBounds(reader);
         reader.DiscardBufferedData();
         reader.BaseStream.Seek(0, System.IO.SeekOrigin.Begin); 
-        setUpGrid(_maxX,_minX,_maxZ,_minZ,reader);
+        SetUpGrid(_maxX,_minX,_maxZ,_minZ,reader);
         SetUpMesh();
-   
     }
+    #endregion
 
-    private void getCoordinateBounds(StreamReader reader) //works
+    #region Methods
+    private void GetCoordinateBounds(StreamReader reader) 
     {
          _maxX = double.MinValue;
          _maxZ = double.MinValue;
@@ -66,7 +70,7 @@ public class TerrainMesh : MonoBehaviour
         }
     }
 
-    void setUpGrid(double maxX, double minX, double maxY, double minY, StreamReader reader)
+    void SetUpGrid(double maxX, double minX, double maxY, double minY, StreamReader reader)
     {
         int xRange = (int)Math.Round(maxX / triangulationSquareSize);
         int yRange = (int)Math.Round(maxY / triangulationSquareSize);
@@ -97,8 +101,11 @@ public class TerrainMesh : MonoBehaviour
                     double y = double.Parse(parts[1]);
                     double z = double.Parse(parts[2]);
                     //draw point-cloud:
-                    // Vector3 temp = new Vector3((float)x, (float)z, (float)y); //swap z and y, unity axises...
-                    // Debug.DrawLine(temp,(temp+Vector3.one*0.1f),Color.green,float.MaxValue,false); 
+                    if (drawPointCloud)
+                    {
+                        var temp = new Vector3((float)x, (float)z, (float)y); //swap z and y, unity axises...
+                        Debug.DrawLine(temp,(temp+Vector3.one*0.1f),Color.green,float.MaxValue,false); 
+                    }
                     Grid[(int)(x / triangulationSquareSize),(int)(y / triangulationSquareSize)].Add(z);
                 }
             }
@@ -109,7 +116,6 @@ public class TerrainMesh : MonoBehaviour
     {
         int xRange = Grid.GetUpperBound(0) + 1; //returns index of last element, range therefore +1
         zRange = Grid.GetUpperBound(1) + 1;
-        // double rangeZ = _maxY - _minY;
         Mesh newMesh = new Mesh();
         List<Vertex> vertices = new List<Vertex>();
         List<int> triangles = new List<int>();
@@ -125,10 +131,9 @@ public class TerrainMesh : MonoBehaviour
 
                 var tempVertex = new Vertex(tempTransform, Vector3.one, Vector2.zero);
                 vertices.Add(tempVertex);
-                // Debug.Log("vertex added");
             }
         }
-        //unity is using clockwise winding order, need to change order of triangles (they are ccw)! (X) done, document in report ( )
+        //unity is using clockwise winding order
         //setting triangles
         for (int x = 0; x < xRange - 1; x++) // unity X
         {
@@ -166,31 +171,7 @@ public class TerrainMesh : MonoBehaviour
         newMesh.RecalculateTangents();
         _meshFilter.mesh = newMesh;
         Grid = null; //free memory
-        //
-        // int t = (zRange-1)*3*2;
-        // for (int i = 0; i <=3; i++)
-        // {
-        //     Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
-        //     Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.yellow,float.MaxValue,false);
-        // }
-        // Vector3 temp1 = vertices[newMesh.triangles[0]].Position - Vector3.one * 0.5f;
-        // Debug.DrawLine(vertices[newMesh.triangles[0]].Position,temp1,Color.magenta,float.MaxValue,false);
-        // for (int i = t; i <=t+3; i++)
-        // {
-        //     Vector3 temp = vertices[newMesh.triangles[i]].Position - Vector3.one * 0.2f;
-        //     Debug.DrawLine(vertices[newMesh.triangles[i]].Position,temp,Color.green,float.MaxValue,false);
-        // }
+    
     }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    #endregion
 }

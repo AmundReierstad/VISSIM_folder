@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class SingletonTransform : MonoBehaviour
+    //Singleton to store transform when transitioning scenes
 {
     public static SingletonTransform Instance;
    [SerializeField] public Nullable<Vector3> TransformStart;

@@ -5,17 +5,24 @@ using System.IO;
 using UnityEngine;
 
 public class Vertex 
+    //simple class to store vertex data
 {
+    #region Members
     public Vector3 Position;
     public Vector3 Normal;
     public Vector2 Uv;
+    #endregion
+
+    #region Constructor
     public Vertex(Vector3 pos, Vector3 norm, Vector2 uv)
     {
         Position = pos;
         Normal = norm;
         Uv = uv;
     }
+    #endregion
 
+    #region Methods
     public static Vertex LoadFromFile(StreamReader reader)
     {
         string line = reader.ReadLine();
@@ -34,4 +41,5 @@ public class Vertex
 
         return new Vertex(position, normal, uv);
     }
+    #endregion
 }

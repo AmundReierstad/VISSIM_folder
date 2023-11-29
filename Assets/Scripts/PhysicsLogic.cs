@@ -5,36 +5,37 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 public class PhysicsLogic : MonoBehaviour
+    //class managing the physics of the game object
 {
-        [SerializeField] private GameObject planeRef;//set to plane object
-        [SerializeField] private GameObject ballRef; //set to object containing this component
-        [SerializeField] private float mass = 1; //mass for physics calculations
-        [SerializeField] private float dampeningFactor=1; //factor of which y component of speed is retained upon reflection/bounce with surface
-        [SerializeField] private float μFrictionFactor=0.3f; 
-        [SerializeField] private float toleranceClipping = 0.2f; //sensitivity for triggering collision with terrain
-        [SerializeField] private bool enableRolling = true;
-        [SerializeField] private List<GameObject> otherPhysicsObjects;
-        private MeshFilter _ballMesh;
-        private float _ballRadius;
-        private Vector3[] _rotatedVertices;
-        private MeshFilter _planeMesh;
-        private float _planeZMax;
-        private float _planeXMax;
-        private int _planeRefZRange; //in accordance to grid
-        private Vector3 _origoGrid;
-        private double _gridSquareSize;
-        private bool _onGrid;
-        private Vector3 _planeNormalVector;
-        private Vector3 _planeNormalVectorPrev;
-        private Vector3 _fGravity;
-        private Vector3 _fNormal;
-        private Vector3 _fRStaticFriction;
-        private Vector3 _velocity;
-        private double _angularVelocity;
-        private Vector3 _startVelocity;
-        private Vector3 _acceleration;
-        private CollisionStates _currentState;
-        private int _prevIndex;
+    #region Members
+    [SerializeField] private GameObject planeRef;//set to plane object
+    [SerializeField] private GameObject ballRef; //set to object containing this component
+    [SerializeField] private float mass = 1; //mass for physics calculations
+    [SerializeField] private float dampeningFactor=1; //factor of which y component of speed is retained upon reflection/bounce with surface
+    [SerializeField] private float μFrictionFactor=0.3f; 
+    [SerializeField] private float toleranceClipping = 0.2f; //sensitivity for triggering collision with terrain
+    [SerializeField] private bool enableRolling = true;
+    [SerializeField] private List<GameObject> otherPhysicsObjects;
+    private MeshFilter _ballMesh;
+    private float _ballRadius;
+    private MeshFilter _planeMesh;
+    private float _planeZMax;
+    private float _planeXMax;
+    private int _planeRefZRange; //in accordance to grid
+    private Vector3 _origoGrid;
+    private double _gridSquareSize;
+    private bool _onGrid;
+    private Vector3 _planeNormalVector;
+    private Vector3 _planeNormalVectorPrev;
+    private Vector3 _fGravity;
+    private Vector3 _fNormal;
+    private Vector3 _fRStaticFriction;
+    private Vector3 _velocity;
+    private double _angularVelocity;
+    private Vector3 _startVelocity;
+    private Vector3 _acceleration;
+    private CollisionStates _currentState;
+    private int _prevIndex;
     public struct CollisionData
     {
         public CollisionStates State;
@@ -48,50 +49,47 @@ public class PhysicsLogic : MonoBehaviour
         ClippingMassCenterBelowSurface,
         AboveSurface
     }
-    
-    // Start is called before the first frame update
+    #endregion
+
+    #region Constructors
     void Awake()
     {
-        #region Initialization
+        #region Initialization while loading scene
         planeRef = GameObject.Find("TerrainMesh");
         // ballRef = GameObject.Find("Ball"); // set in editor to self
         _planeMesh = planeRef.GetComponent<MeshFilter>();
-        _ballMesh = ballRef.GetComponent<MeshFilter>();
+        _ballMesh = ballRef.GetComponentInChildren<MeshFilter>();
         foreach(GameObject obj in GameObject.FindGameObjectsWithTag("PhysicsLogicObject")) {
 
             otherPhysicsObjects.Add(obj);
         }
         otherPhysicsObjects.Remove(gameObject); //remove reference to self from list
-         _rotatedVertices = new Vector3[_ballMesh.mesh.vertices.Length];
          _fGravity = Physics.gravity * mass;
         _startVelocity=Vector3.zero;
         _acceleration=Vector3.zero;
         _velocity = _startVelocity;
         #endregion
-
     }
-
     void Start()
     {
-        #region Further initialization
+        #region Initialization at first frame
         _planeXMax = (float)planeRef.GetComponent<TerrainMesh>()._maxX;
         _planeZMax = (float)planeRef.GetComponent<TerrainMesh>()._maxZ;
         _origoGrid=_planeMesh.mesh.vertices[0];
         _gridSquareSize = planeRef.GetComponent<TerrainMesh>().triangulationSquareSize;
-        _planeRefZRange = planeRef.GetComponent<TerrainMesh>().zRange; //needed for calculation further on
+        _planeRefZRange = planeRef.GetComponent<TerrainMesh>().zRange;
         _ballRadius = ballRef.GetComponent<SphereCollider>().radius;
-        #endregion
-        #region FindInitialIndex, calculate initial normal
+     
         int startIndex = FindTriangleFast();
         if (startIndex != -1) _onGrid = true;
-        // Debug.Log("Index calculated:"+FindTriangleFast());
         _prevIndex = startIndex;
         _planeNormalVector = CalculateNormalizedNormalForTriangleSurface(startIndex);
         #endregion
     }
+    #endregion
 
-    // Update is called once per frame
-    void FixedUpdate()
+    #region Methods
+    void FixedUpdate() //called in physics step each frame
     {
         //DONT UPDATE IF NOT ON GRID
         if (!_onGrid) return;
@@ -139,25 +137,19 @@ public class PhysicsLogic : MonoBehaviour
         double ω = _velocity.magnitude / _ballRadius;                                           //angular momentum in radians/second
         double dThetaDegrees = ω*(180/Math.PI)*Time.fixedDeltaTime;                             //convert to degrees and calculate delta
         Quaternion q = Quaternion.AngleAxis((float)dThetaDegrees,rotationAxis);
-        var tmp = _ballMesh.mesh.vertices;
-        for (var i = 0; i < tmp.Length; i++)
-        {
-            _rotatedVertices[i] = q * _ballMesh.mesh.vertices[i];
-        }
-        _ballMesh.mesh.vertices = _rotatedVertices;
+        _ballMesh.transform.Rotate(q.eulerAngles);
+        // var tmp = _ballMesh.mesh.vertices;
+        // for (var i = 0; i < tmp.Length; i++)
+        // {
+        //     _rotatedVertices[i] = q * _ballMesh.mesh.vertices[i];
+        // }
+        // _ballMesh.mesh.vertices = _rotatedVertices;
         #endregion
     }
-
-    Vector3 CalculateNormalizedNormalForTriangleSurface(int index)
-    {
-        var mesh = _planeMesh.mesh;
-        
-        Vector3 ab = mesh.vertices[mesh.triangles[index]]-mesh.vertices[mesh.triangles[index+1]];
-        Vector3 ac= mesh.vertices[mesh.triangles[index]]-mesh.vertices[mesh.triangles[index+2]];
-        Vector3 normal = Vector3.Cross(ab,ac).normalized;
-        return normal;
-    }
-    private Vector3 ReturnBarycentricCordsXZplane(Vector3 ballPosition, Vector3 a, Vector3 b, Vector3 c)
+    
+    //depricated by more efficent functions in region TriangleSurfaceFunctions, retained for documentation per report.
+    #region LegacyTriangleSurfaceMethods
+    /*private Vector3 ReturnBarycentricCordsXZplane(Vector3 ballPosition, Vector3 a, Vector3 b, Vector3 c)
     {
         //check in relation to XZ plane, therefore set Y to 0 for all points
         ballPosition.y = 0;
@@ -189,8 +181,8 @@ public class PhysicsLogic : MonoBehaviour
             baryCentricCoordinates.z = temp;
         
         return baryCentricCoordinates;
-    }
-    private int GetWhichTriangleBallIsIn() 
+    }*/
+    /*private int GetWhichTriangleBallIsIn() 
     //returns index of starting vertex of triangle ball is in. O(n triangles)
     {
         var mesh = _planeMesh.mesh;
@@ -221,52 +213,19 @@ public class PhysicsLogic : MonoBehaviour
         }
         Debug.Log("Ball not found on triangle surface initially");
         return 0; //not found
-    }
-    private int FindTriangleFast() 
-    //returns index of starting triangle by calculating grid position by world position. O(1) much faster
-    {
-        var objectPosition = transform.position;
-        var dif = objectPosition - _origoGrid;
-        int offsetX = (int)(dif.x / _gridSquareSize);
-        int offsetZ = (int)(dif.z / _gridSquareSize);
-        int triangle = 3;
-
-        //bounds check
-        if (   objectPosition.x < _origoGrid.x 
-            || objectPosition.z < _origoGrid.z 
-            || objectPosition.x>_planeXMax 
-            || objectPosition.z>_planeZMax) {
-            return -1; //out of bounds
-        } 
-        var index = ((offsetX) * (_planeRefZRange-1)*triangle*2) //x component
-                    +(offsetZ)*(triangle*2); //z component
-
-        // Debug.DrawLine(mesh.vertices[mesh.triangles[index]],mesh.vertices[mesh.triangles[index]]-=Vector3.one*0.1f,Color.cyan,float.MaxValue,false);
-        //found triangle index corresponding to lower triangle of a quad, need to determine if its in the upper or lower triangle
-        var mesh = _planeMesh.mesh;
-        float tmpX = objectPosition.x - mesh.vertices[mesh.triangles[index]].x;
-        float tmpZ = objectPosition.z - mesh.vertices[mesh.triangles[index]].z;
-        if (tmpX>tmpZ)//test diagonal relation to square its in
-            index += 3;
-        // Debug.Log("TmpX:"+tmpX);
-        // Debug.Log("TmpZ:"+tmpZ);
-        // Debug.Log("difX:"+dif.x);
-        // Debug.Log("offsetX:"+offsetX);
-        // Debug.Log("offsetZ:"+offsetZ);
-        return index;
-    }
-    private int GetWhichTriangleBallIsInOptimized(int prevIndex) 
+    }*/
+   /* private int GetWhichTriangleBallIsInOptimized(int prevIndex) 
     //returns index of starting vertex of triangle ball is in by searching around previous index. 
     {
         var zRange = _planeRefZRange;
         var mesh = _planeMesh.mesh;
         int triangle = 3;
-        /* search triangles around previous index *
-         *    I  I  I
-         * ^  I  *  I
-         * Z  I  I  I
-         *    X ->
-         */
+         // search triangles around previous index *
+         // *    I  I  I
+         // * ^  I  *  I
+         // * Z  I  I  I
+         // *    X ->
+         //
         for (int j = -1; j <=2; j++)
         {
             int searchIndex = prevIndex+((zRange - 1) * 3 * 2*j); // (zRange - 1) * 3 * 2*j) factor to shift to next strip
@@ -296,9 +255,53 @@ public class PhysicsLogic : MonoBehaviour
         }
         Debug.Log("Ball not found on triangle surface");
         return -1; //not found
+    }*/
+    #endregion
+   
+    # region TriangleSurfaceMethods
+    Vector3 CalculateNormalizedNormalForTriangleSurface(int index)
+    {
+        var mesh = _planeMesh.mesh;
+        
+        Vector3 ab = mesh.vertices[mesh.triangles[index]]-mesh.vertices[mesh.triangles[index+1]];
+        Vector3 ac= mesh.vertices[mesh.triangles[index]]-mesh.vertices[mesh.triangles[index+2]];
+        Vector3 normal = Vector3.Cross(ab,ac).normalized;
+        return normal;
     }
+    private int FindTriangleFast() 
+    //returns index of starting triangle by calculating grid position by world position. O(1) much faster
+    {
+        var objectPosition = transform.position;
+        var dif = objectPosition - _origoGrid;
+        int offsetX = (int)(dif.x / _gridSquareSize);
+        int offsetZ = (int)(dif.z / _gridSquareSize);
+        int triangle = 3;
+
+        //bounds check
+        if (   objectPosition.x < _origoGrid.x 
+            || objectPosition.z < _origoGrid.z 
+            || objectPosition.x>_planeXMax 
+            || objectPosition.z>_planeZMax) {
+            return -1; //out of bounds
+        } 
+        var index = ((offsetX) * (_planeRefZRange-1)*triangle*2) //x component
+                    +(offsetZ)*(triangle*2); //z component
+        
+        //found triangle index corresponding to lower triangle of a quad, need to determine if its in the upper or lower triangle
+        var mesh = _planeMesh.mesh;
+        float tmpX = objectPosition.x - mesh.vertices[mesh.triangles[index]].x;
+        float tmpZ = objectPosition.z - mesh.vertices[mesh.triangles[index]].z;
+        if (tmpX>tmpZ)//test diagonal relation to square its in
+            index += 3;
+   
+        return index;
+    }
+    #endregion
+
+    #region CollisionMethods
     public CollisionData DetectCollisionWithTriangleSurface(Vector3 pointInSurface, Vector3 surfaceNormalVector, Vector3 ballPosition, float radiusBall)
-   {
+    //returns the current collision data for the gameObject
+    {
        CollisionData returnData;
         var y = ballPosition-pointInSurface;
         var n = surfaceNormalVector;
@@ -343,6 +346,7 @@ public class PhysicsLogic : MonoBehaviour
 
     }
     public void CollisionResponse(int indexOfCurrentTriangle)
+    //executes the collisionresponse in accordance to the collisiondata
     {
         var mesh = _planeMesh.mesh;
         CollisionData currentData=
@@ -354,7 +358,6 @@ public class PhysicsLogic : MonoBehaviour
         {
             case CollisionStates.AboveSurface:
                 _fNormal = Vector3.zero;
-                // Debug.Log("above surface");
                 break;
             case CollisionStates.InContact:
             {
@@ -364,28 +367,24 @@ public class PhysicsLogic : MonoBehaviour
                     _velocity = _velocity - 2*(Vector3.Dot(_velocity, _planeNormalVector)) * _planeNormalVector; 
                 }
                 _fNormal =-Vector3.Dot(_planeNormalVector,_fGravity)*_planeNormalVector;
-                // Debug.Log("in contact with surface");
                 break;
             }
             case CollisionStates.ClippedThrough:
             {
                 _fNormal =-Vector3.Dot(_planeNormalVector,_fGravity)*_planeNormalVector;
                 ballRef.transform.Translate(_planeNormalVector*(currentData.MagnitudeY+_ballRadius)); //translate back onto surface
-                // Debug.Log("clipped through");
                 break;
             }
             case CollisionStates.ClippingMassCenterAboveSurface:
             {
                 _fNormal =-Vector3.Dot(_planeNormalVector,_fGravity)*_planeNormalVector;
                 ballRef.transform.Translate(_planeNormalVector*(_ballRadius-currentData.MagnitudeY)); //translate back onto surface
-                // Debug.Log("clipping MC above");
                 break;
             }
             case CollisionStates.ClippingMassCenterBelowSurface:
             {
                 _fNormal =-Vector3.Dot(_planeNormalVector,_fGravity)*_planeNormalVector;
                 ballRef.transform.Translate(_planeNormalVector*(_ballRadius+currentData.MagnitudeY));
-                // Debug.Log("clipping MC below");
                 break;
             }
             default:
@@ -406,12 +405,21 @@ public class PhysicsLogic : MonoBehaviour
             }
         }
     }
-
+    
     public void CollisionResponseBetweenObjects(PhysicsLogic other)
+    //executes collision reponse when colliding with another physicslogics gameObject
     {
         //modeled as elastic bounce
         _velocity = ((mass - other.mass) / (mass + other.mass) * _velocity +
                      ((2 * other.mass) / (mass + other.mass)) * other._velocity);
     }
+    #endregion
     
+    #region UtilityFunctions
+    public float GetMass()
+    {
+        return mass;
+    }
+    #endregion
+    #endregion
 }
